@@ -1,65 +1,68 @@
 package main
 
 import (
-	"os"
 	"fmt"
-	"strconv"
+	"io/ioutil"
 )
 
-const min int = 32
-const max int = 127
-const diff int = max-min
 
-func crypt(s string, num int) string {
-	a := []byte(s)
-	var b []byte
-	fmt.Println(a)
-	for _, c := range a {
-		d := int(c)
-		if d > max || d < min {
-			fmt.Println("Invalid character!")
-			break
-		}
-		e := d + num
-		if e > max {
-			e -= diff
-		}
-		if e < min {
-			e += diff
-		}
+// Crypt function, takes a byte array and a number
+func crypt(a []byte, num int) string {
+		num %= 256						// If num is over 255, reduce it using its reminder
+		var b []byte					// Define landing array for en/decrypted characters
+		for _, c := range a {			// Cycle trough all characters
+		d := int(c)						// make d a integer representative of the byte value
+		e := (d + num) % 256			// Add the en/decryption number (Use the reminder to avoid out of range numbers
 		b = append(b,byte(e))
 	}
-	fmt.Println(b)
 	return string(b)
 }
 
-func printEx() {
-	fmt.Println("Must be used with three command line arguements!")
-	fmt.Printf("Use the following syntax: type number(0-%v) text\n", diff)
-	fmt.Println("Use either -e for encryption, or -d for decrypting")
-	fmt.Println("Example: -d 78 \"This is my plaintext\"")
+// Encrypts a string with num rotation
+func encrypt(s string, num int) (res string) {
+	a := []byte(s)
+	res = crypt(a, num)
+	return
+}
+
+// Decrypts a string encrypted with num rotation
+func decrypt(s string, num int) (res string) {
+	a := []byte(s)
+	res = crypt(a, -num)
+	return
+}
+
+// Encrypts a file with num rotation
+func encryptFile(path string, num int) {
+	a, err := ioutil.ReadFile(path)
+	if err != nil {
+		fmt.Printf("File Error: %s\n", err)
+	}
+	err = ioutil.WriteFile("encrypted.txt", []byte(crypt(a, num)), 0777)
+}
+
+// Decrypts a file encrypted with num rotation
+func decryptFile(path string, num int) {
+	a, err := ioutil.ReadFile(path)
+	if err != nil {
+		fmt.Printf("File Error: %s\n", err)
+	}
+	err = ioutil.WriteFile("decrypted.txt", []byte(crypt(a, -num)), 0777)
+
+}
+
+// Supidly easy bruteforce printer - to be improved
+func crack(cipher string, size int) {
+	for i := 1; i < size+1; i++ {
+		fmt.Println("Key", i, decrypt(cipher, i))
+	}
 }
 
 func main() {
-	args := os.Args[1:]
-	if len(args) != 3 || (args[0] != "-d" && args[0] != "-e") {
-		printEx()
-	} else {
-		num := args[1]
-		msg := args[2]
-
-		numr, err := strconv.Atoi(num)
-
-		if err != nil || numr < 1 || numr > 127 {
-			printEx()
-		} else {
-			if args[0] == "-d" {
-				fmt.Println(crypt(msg, -numr))
-			} else if args[0] == "-e" {
-				fmt.Println(crypt(msg, numr))
-			} else {
-				fmt.Println("This message should never be shown.")
-			}
-		}
-	}
+	// Examples
+	fmt.Println(encrypt("This is a test message", 10))
+	fmt.Println(decrypt("^rs}*s}*k*~o}~*wo}}kqo", 10))
+	crack("^rs}*s}*k*~o}~*wo}}kqo", 20)
+	encryptFile("test.txt", 78)
+	decryptFile("encrypted.txt", 78)
 }
